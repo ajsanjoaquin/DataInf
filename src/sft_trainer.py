@@ -136,7 +136,7 @@ else:
 
 from transformers import LlamaForCausalLM, LlamaTokenizer, get_linear_schedule_with_warmup, set_seed
 
-llama_tokenizer = LlamaTokenizer.from_pretrained(script_args.model_name, local_files_only=script_args.local_files_only)
+llama_tokenizer = LlamaTokenizer.from_pretrained(script_args.model_name)
 llama_tokenizer.padding_side = 'right'
 llama_tokenizer.pad_token = llama_tokenizer.eos_token
 
