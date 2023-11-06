@@ -56,6 +56,7 @@ class ScriptArguments:
     peft_lora_alpha: Optional[int] = field(default=32, metadata={"help": "the alpha parameter of the LoRA adapters"})
     logging_steps: Optional[int] = field(default=1, metadata={"help": "the number of logging steps"})
     use_auth_token: Optional[bool] = field(default=True, metadata={"help": "Use HF auth token to access the model"})
+    local_files_only: Optional[bool] = field(default=False, metadata={"help": "Load only local files"})
     num_train_epochs: Optional[int] = field(default=10, metadata={"help": "the number of training epochs"})
     max_steps: Optional[int] = field(default=-1, metadata={"help": "the number of training steps"})
     save_steps: Optional[int] = field(
@@ -92,6 +93,7 @@ model = AutoModelForCausalLM.from_pretrained(
     trust_remote_code=script_args.trust_remote_code,
     torch_dtype=torch_dtype,
     use_auth_token=script_args.use_auth_token,
+    local_files_only=script_args.local_files_only,
 )
 model.config.use_cache = False
 
@@ -134,7 +136,7 @@ else:
 
 from transformers import LlamaForCausalLM, LlamaTokenizer, get_linear_schedule_with_warmup, set_seed
 
-llama_tokenizer = LlamaTokenizer.from_pretrained(script_args.model_name)
+llama_tokenizer = LlamaTokenizer.from_pretrained(script_args.model_name, local_files_only=script_args.local_files_only)
 llama_tokenizer.padding_side = 'right'
 llama_tokenizer.pad_token = llama_tokenizer.eos_token
 
