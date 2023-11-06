@@ -70,6 +70,7 @@ class ScriptArguments:
 parser = HfArgumentParser(ScriptArguments)
 script_args = parser.parse_args_into_dataclasses()[0]
 
+print("loading model...")
 # Step 1: Load the model
 if script_args.load_in_8bit and script_args.load_in_4bit:
     raise ValueError("You can't load the model in 8 bits and 4 bits at the same time")
@@ -96,14 +97,14 @@ model = AutoModelForCausalLM.from_pretrained(
     local_files_only=script_args.local_files_only,
 )
 model.config.use_cache = False
-
+print("loading dataset...")
 # Step 2: Load the dataset
 try:
     # import pdb; pdb.set_trace()
     dataset = load_dataset(script_args.dataset_name, split="train")
 except:
     dataset = load_from_disk(script_args.dataset_name)
-
+print("loading training args...")
 # Step 3: Define the training arguments
 training_args = TrainingArguments(
     output_dir=script_args.output_dir,
@@ -119,7 +120,7 @@ training_args = TrainingArguments(
     push_to_hub=script_args.push_to_hub,
     hub_model_id=script_args.hub_model_id,
 )
-
+print("loading LORA config...")
 # Step 4: Define the LoraConfig
 if script_args.use_peft:
     peft_config = LoraConfig(
@@ -139,7 +140,7 @@ from transformers import LlamaForCausalLM, LlamaTokenizer, get_linear_schedule_w
 llama_tokenizer = LlamaTokenizer.from_pretrained(script_args.model_name)
 llama_tokenizer.padding_side = 'right'
 llama_tokenizer.pad_token = llama_tokenizer.eos_token
-
+print("training...")
 # Step 5: Define the Trainer
 trainer = SFTTrainer(
     model=model,
@@ -154,7 +155,7 @@ trainer = SFTTrainer(
 # import pdb; pdb.set_trace()
 
 trainer.train()
-
+print("saving...")
 # Step 6: Save the model
 # import pdb; pdb.set_trace()
 trainer.save_model(script_args.output_dir)
