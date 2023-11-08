@@ -165,17 +165,18 @@ class LORAEngineGeneration(object):
                 project_path,
                 dataset_name='math_with_reason',
                 device="cuda",
-                adapter_path=None):
+                adapter_path=None,
+                load_base_only=False):
         self.base_path = base_path
         self.project_path = project_path
         self.dataset_name = dataset_name
         if adapter_path is None:
             self.adapter_path = f"{self.project_path}/models/{self.dataset_name}_13bf"
         self.device=device
-        self.load_pretrained_network()
+        self.load_pretrained_network(load_base_only)
         self.load_datasets()
 
-    def load_pretrained_network(self):
+    def load_pretrained_network(self, load_base_only):
         # setup tokenizer
         self.tokenizer = LlamaTokenizer.from_pretrained(self.base_path)
         self.tokenizer.padding_side = "right"
@@ -191,10 +192,12 @@ class LORAEngineGeneration(object):
             offload_folder="offload",
             offload_state_dict=True,
         )
-
-        # load a pre-trained model.
-        self.model = PeftModel.from_pretrained(base_model, self.adapter_path, is_trainable=True)
-        self.finetuned_config = LoraConfig.from_pretrained(pretrained_model_name_or_path=self.adapter_path)
+        if load_base_only is False:
+            # load a pre-trained model.
+            self.model = PeftModel.from_pretrained(base_model, self.adapter_path, is_trainable=True)
+            self.finetuned_config = LoraConfig.from_pretrained(pretrained_model_name_or_path=self.adapter_path)
+        else:
+            print("WARNING: base model (self.base_model) is being used. self.model is disabled and you won't be able to compute grads.")
 
     def load_datasets(self):
         self.train_dataset = Dataset.load_from_disk(f"{self.project_path}/datasets/{self.dataset_name}_train.hf")
