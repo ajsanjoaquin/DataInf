@@ -185,7 +185,7 @@ class LORAEngineGeneration(object):
 
         # load a base model
         quantization_config = BitsAndBytesConfig(load_in_8bit=True, load_in_4bit=False)
-        base_model = LlamaForCausalLM.from_pretrained(
+        self.base_model = LlamaForCausalLM.from_pretrained(
             self.base_path,
             quantization_config=quantization_config,
             torch_dtype=torch.bfloat16,
@@ -194,7 +194,7 @@ class LORAEngineGeneration(object):
         )
         if load_base_only is False:
             # load a pre-trained model.
-            self.model = PeftModel.from_pretrained(base_model, self.adapter_path, is_trainable=True)
+            self.model = PeftModel.from_pretrained(self.base_model, self.adapter_path, is_trainable=True)
             self.finetuned_config = LoraConfig.from_pretrained(pretrained_model_name_or_path=self.adapter_path)
         else:
             print("WARNING: base model (self.base_model) is being used. self.model is disabled and you won't be able to compute grads.")
