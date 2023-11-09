@@ -162,7 +162,8 @@ class IFEngineGeneration(object):
         start_time = time()
         hvp_proposed_dict=defaultdict(dict)
         for val_id in tqdm(self.val_grad_dict.keys()):
-            for weight_name in self.val_grad_dict[val_id]:
+            print("Computing for each model param")
+            for weight_name in tqdm(self.val_grad_dict[val_id]):
                 # lambda_const computation
                 S=torch.zeros(len(self.tr_grad_dict.keys()))
                 for tr_id in self.tr_grad_dict:
