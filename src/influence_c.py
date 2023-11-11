@@ -50,8 +50,8 @@ class IFEngineGeneration(object):
                 hvp_proposed_dict[val_id][weight_name] = hvp
 
             print("Saving intermediate results...")
-            with open(f"./hvp_val_{val_id}.pkl",'wb') as file:
-                pickle.dump(hvp_proposed_dict, file)
+            with open(join(self.savedir, f"hvps/hvp_val_{val_id}.pkl"),'wb') as file:
+                pickle.dump(hvp_proposed_dict, file, pickle.HIGHEST_PROTOCOL)
 
         self.hvp_dict['proposed'] = hvp_proposed_dict
         self.time_dict['proposed'] = time()-start_time
@@ -77,7 +77,7 @@ class IFEngineGeneration(object):
         results['influence']=self.IF_dict
 
         with open(f"./results_{run_id}.pkl",'wb') as file:
-            pickle.dump(results, file)
+            pickle.dump(results, file, pickle.HIGHEST_PROTOCOL)
 
 def load_pkl(path):
     with open(path, 'rb') as file:
