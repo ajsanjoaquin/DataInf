@@ -3,6 +3,7 @@ from tqdm import tqdm
 from collections import defaultdict
 import pandas as pd
 import pickle, os
+from os.path import join
 import torch
 
 class IFEngine(object):
@@ -124,13 +125,15 @@ class IFEngine(object):
                 
             self.IF_dict[method_name] = pd.Series(if_tmp_dict, dtype=float).to_numpy()    
 
-    def save_result(self, noise_index, run_id=0):
+    def save_result(self, savedir, noise_index, run_id=0):
         results={}
         results['runtime']=self.time_dict
         results['noise_index']=noise_index
         results['influence']=self.IF_dict
+        if not os.path.exists(savedir):
+            os.makedirs(savedir)
 
-        with open(f"./results_{run_id}.pkl",'wb') as file:
+        with open(join(savedir, f"results_{run_id}.pkl"),'wb') as file:
             pickle.dump(results, file)
 
 class IFEngineGeneration(object):
@@ -194,10 +197,13 @@ class IFEngineGeneration(object):
 
             self.IF_dict[method_name] = pd.DataFrame(if_tmp_dict, dtype=float)   
 
-    def save_result(self, run_id=0):
+    def save_result(self, savedir, run_id=0):
         results={}
         results['runtime']=self.time_dict
         results['influence']=self.IF_dict
 
-        with open(f"./results_{run_id}.pkl",'wb') as file:
+        if not os.path.exists(savedir):
+            os.makedirs(savedir)
+
+        with open(join(savedir, f"results_{run_id}.pkl"),'wb') as file:
             pickle.dump(results, file)
