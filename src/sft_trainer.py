@@ -19,6 +19,7 @@ import torch
 from accelerate import Accelerator
 from datasets import load_dataset
 from peft import LoraConfig
+import json
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments
 
@@ -39,6 +40,7 @@ class ScriptArguments:
     dataset_name: Optional[str] = field(
         default="", metadata={"help": "the dataset name"}
     )
+    config_json: Optional[str] = field(default=None, metadata={"help": "the config json for PEFT"})
     dataset_text_field: Optional[str] = field(default="text", metadata={"help": "the text field of the dataset"})
     log_with: Optional[str] = field(default=None, metadata={"help": "use 'wandb' to log with wandb"})
     learning_rate: Optional[float] = field(default=3e-4, metadata={"help": "the learning rate"})
@@ -122,7 +124,12 @@ training_args = TrainingArguments(
 )
 print("loading LORA config...")
 # Step 4: Define the LoraConfig
-if script_args.use_peft:
+if script_args.use_peft and script_args.config_json is not None:
+    config_json = json.load(open(script_args.config_json))
+    peft_config = LoraConfig(**config_json)
+
+elif script_args.use_peft and script_args.config_json is None:
+    print("Using default PEFT config but no provided config_json. Reverting to provided values.")
     peft_config = LoraConfig(
         task_type="CAUSAL_LM",
         inference_mode=False,
