@@ -105,7 +105,7 @@ try:
     # import pdb; pdb.set_trace()
     dataset = load_dataset(script_args.dataset_name, split="train")
 except:
-    dataset = load_dataset('csv', script_args.dataset_name)
+    dataset = load_dataset('csv', data_files=script_args.dataset_name)
 print("loading training args...")
 # Step 3: Define the training arguments
 training_args = TrainingArguments(
