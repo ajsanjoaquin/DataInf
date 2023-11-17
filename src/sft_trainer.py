@@ -99,6 +99,15 @@ model = AutoModelForCausalLM.from_pretrained(
     local_files_only=script_args.local_files_only,
 )
 model.config.use_cache = False
+
+if hasattr(model, "enable_input_require_grads"):
+    model.enable_input_require_grads()
+else:
+    def make_inputs_require_grad(module, input, output):
+         output.requires_grad_(True)
+
+    model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
+
 print("loading dataset...")
 # Step 2: Load the dataset
 try:
