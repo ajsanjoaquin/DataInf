@@ -84,10 +84,9 @@ elif script_args.load_in_8bit or script_args.load_in_4bit:
     device_map = {"": Accelerator().local_process_index}
     torch_dtype = torch.bfloat16
 else:
-    device_map = None
     quantization_config = None
     torch_dtype = None
-device_map = 'auto'
+    device_map = 'auto'
 
 model = AutoModelForCausalLM.from_pretrained(
     script_args.model_name,
