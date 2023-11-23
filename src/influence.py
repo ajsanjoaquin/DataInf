@@ -126,7 +126,7 @@ class IFEngine(object):
                 
             self.IF_dict[method_name] = pd.Series(if_tmp_dict, dtype=float).to_numpy()    
 
-    def save_result(self, savedir, noise_index, run_id=0):
+    def save_result(self, savedir, noise_index=0, run_id=0):
         results={}
         results['runtime']=self.time_dict
         results['noise_index']=noise_index
