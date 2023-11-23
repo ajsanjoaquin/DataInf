@@ -12,13 +12,14 @@ class IFEngine(object):
         self.hvp_dict=defaultdict(list)
         self.IF_dict=defaultdict(list)
 
-    def preprocess_gradients(self, tr_grad_dict, val_grad_dict, noise_index):
+    def preprocess_gradients(self, tr_grad_dict, val_grad_dict, noise_index=0):
         self.tr_grad_dict = tr_grad_dict
         self.val_grad_dict = val_grad_dict
         self.noise_index = noise_index
 
         self.n_train = len(self.tr_grad_dict.keys())
         self.n_val = len(self.val_grad_dict.keys())
+        print("Computing avg gradient on validation dataset...")
         self.compute_val_grad_avg()
 
     def compute_val_grad_avg(self):
