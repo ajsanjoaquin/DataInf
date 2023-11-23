@@ -45,7 +45,7 @@ class IFEngine(object):
     def compute_hvp_proposed(self, lambda_const_param=10):
         start_time = time()
         hvp_proposed_dict={}
-        for weight_name in self.val_grad_avg_dict:
+        for weight_name in tqdm(self.val_grad_avg_dict):
             # lambda_const computation
             S=torch.zeros(len(self.tr_grad_dict.keys()))
             for tr_id in self.tr_grad_dict:
@@ -118,7 +118,7 @@ class IFEngine(object):
     def compute_IF(self):
         for method_name in self.hvp_dict:
             if_tmp_dict = {}
-            for tr_id in self.tr_grad_dict:
+            for tr_id in tqdm(self.tr_grad_dict):
                 if_tmp_value = 0
                 for weight_name in self.val_grad_avg_dict:
                     if_tmp_value += torch.sum(self.hvp_dict[method_name][weight_name]*self.tr_grad_dict[tr_id][weight_name])

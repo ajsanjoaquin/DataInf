@@ -37,6 +37,7 @@ class IFEchunks(object):
         '''
         For the entire validation dataset
         '''
+        self.compute_val_grad_avg()
         start_time = time()
         hvp_proposed_dict=defaultdict(dict)
         print("Looping through model weights...")
