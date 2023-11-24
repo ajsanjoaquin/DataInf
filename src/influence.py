@@ -57,6 +57,8 @@ class IFEngine(object):
             if_tmp_dict[tr_id]= -if_tmp_value 
             
         self.IF_arr = pd.Series(if_tmp_dict, dtype=float).to_numpy()
+        # last resort
+        print(self.IF_arr)
 
     def save_result(self, savedir, noise_index=None, run_id=0):
         results={}
