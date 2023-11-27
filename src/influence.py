@@ -79,10 +79,7 @@ class IFEngineGeneration(object):
     This class computes the influence function for every validation data point
     '''
     def __init__(self):
-        self.time_dict = defaultdict(list)
-        self.hvp_dict = defaultdict(list)
-        self.IF_dict = defaultdict(list)
-
+        pass
     def preprocess_gradients(self, tr_grad_dict, val_grad_dict):
         self.tr_grad_dict = tr_grad_dict
         self.val_grad_dict = val_grad_dict
@@ -110,29 +107,31 @@ class IFEngineGeneration(object):
                     C_tmp = torch.sum(self.val_grad_dict[val_id][weight_name] * tmp_grad) / (lambda_const + torch.sum(tmp_grad**2))
                     hvp += (self.val_grad_dict[val_id][weight_name] - C_tmp*tmp_grad) / (self.n_train*lambda_const)
                 hvp_proposed_dict[val_id][weight_name] = hvp
-        self.hvp_dict['proposed'] = hvp_proposed_dict
-        self.time_dict['proposed'] = time()-start_time
+        self.hvp_dict = hvp_proposed_dict
+        self.time_dict = time()-start_time
 
     def compute_IF(self):
-        for method_name in self.hvp_dict:
-            print("Computing IF for method: ", method_name)
-            if_tmp_dict = defaultdict(dict)
-            for tr_id in self.tr_grad_dict:
-                for val_id in self.val_grad_dict:
-                    if_tmp_value = 0
-                    for weight_name in self.val_grad_dict[0]:
-                        if_tmp_value += torch.sum(self.hvp_dict[method_name][val_id][weight_name]*self.tr_grad_dict[tr_id][weight_name])
-                    if_tmp_dict[tr_id][val_id]=if_tmp_value
+        if_tmp_dict = defaultdict(dict)
+        for tr_id in self.tr_grad_dict:
+            for val_id in self.val_grad_dict:
+                if_tmp_value = 0
+                for weight_name in self.val_grad_dict[0]:
+                    if_tmp_value += torch.sum(self.hvp_dict[val_id][weight_name]*self.tr_grad_dict[tr_id][weight_name])
+                if_tmp_dict[tr_id][val_id]=if_tmp_value
 
-            self.IF_dict[method_name] = pd.DataFrame(if_tmp_dict, dtype=float)   
+        self.IF_dict = pd.DataFrame(if_tmp_dict, dtype=float)   
 
     def save_result(self, savedir, run_id=0):
         results={}
-        results['runtime']=self.time_dict
-        results['influence']=self.IF_dict
-
+        results['runtime']=self.time
+        results['influence']=self.IF_arr
         if not os.path.exists(savedir):
             os.makedirs(savedir)
 
-        with open(join(savedir, f"results_{run_id}.pkl"),'wb') as file:
-            pickle.dump(results, file)
+        try:
+            with open(join(savedir, f"results_{run_id}.pkl"),'wb') as file:
+                pickle.dump(results, file)
+        except:
+            print("Error in saving results, retrying...")
+            # save array as pandas series instead
+            pd.Series(self.IF_arr).to_csv(join(savedir, f"results_{run_id}.csv"))
