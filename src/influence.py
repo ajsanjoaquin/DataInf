@@ -29,7 +29,6 @@ class IFEngine(object):
                 self.val_grad_avg_dict[weight_name] += self.val_grad_dict[val_id][weight_name] / self.n_val
 
     def compute_hvp_proposed(self, lambda_const_param=10):
-        start_time = time()
         self.hvp_dict={}
         for weight_name in tqdm(self.val_grad_avg_dict):
             # lambda_const computation
@@ -46,7 +45,6 @@ class IFEngine(object):
                 C_tmp = torch.sum(self.val_grad_avg_dict[weight_name] * tmp_grad) / (lambda_const + torch.sum(tmp_grad**2))
                 hvp += (self.val_grad_avg_dict[weight_name] - C_tmp*tmp_grad) / (self.n_train*lambda_const)
             self.hvp_dict[weight_name] = hvp 
-        self.time = time()-start_time
 
     def compute_IF(self):
         if_tmp_dict = {}
@@ -56,24 +54,13 @@ class IFEngine(object):
                 if_tmp_value += torch.sum(self.hvp_dict[weight_name]*self.tr_grad_dict[tr_id][weight_name])
             if_tmp_dict[tr_id]= -if_tmp_value 
             
-        self.IF_arr = pd.Series(if_tmp_dict, dtype=float).to_numpy()
+        self.IF_arr = pd.Series(if_tmp_dict, dtype=float)
 
-    def save_result(self, savedir, noise_index=None, run_id=0):
-        results={}
-        results['runtime']=self.time
-        results['influence']=self.IF_arr
-        if noise_index is not None:
-            results['noise_index']=noise_index
+    def save_result(self, savedir, run_id=0):
         if not os.path.exists(savedir):
             os.makedirs(savedir)
 
-        try:
-            with open(join(savedir, f"results_{run_id}.pkl"),'wb') as file:
-                pickle.dump(results, file)
-        except:
-            print("Error in saving results, retrying...")
-            # save array as pandas series instead
-            pd.Series(self.IF_arr).to_csv(join(savedir, f"results_{run_id}.csv"))
+        self.IF_arr.to_csv(join(savedir, f"{run_id}.csv"))
 class IFEngineGeneration(object):
     '''
     This class computes the influence function for every validation data point
@@ -88,7 +75,6 @@ class IFEngineGeneration(object):
         self.n_val = len(self.val_grad_dict.keys())
 
     def compute_hvp_proposed(self, lambda_const_param=10):
-        start_time = time()
         hvp_proposed_dict=defaultdict(dict)
         for val_id in tqdm(self.val_grad_dict.keys()):
             print("Computing for each model param")
@@ -108,7 +94,6 @@ class IFEngineGeneration(object):
                     hvp += (self.val_grad_dict[val_id][weight_name] - C_tmp*tmp_grad) / (self.n_train*lambda_const)
                 hvp_proposed_dict[val_id][weight_name] = hvp
         self.hvp_dict = hvp_proposed_dict
-        self.time_dict = time()-start_time
 
     def compute_IF(self):
         if_tmp_dict = defaultdict(dict)
@@ -122,16 +107,7 @@ class IFEngineGeneration(object):
         self.IF_dict = pd.DataFrame(if_tmp_dict, dtype=float)   
 
     def save_result(self, savedir, run_id=0):
-        results={}
-        results['runtime']=self.time
-        results['influence']=self.IF_arr
         if not os.path.exists(savedir):
             os.makedirs(savedir)
 
-        try:
-            with open(join(savedir, f"results_{run_id}.pkl"),'wb') as file:
-                pickle.dump(results, file)
-        except:
-            print("Error in saving results, retrying...")
-            # save array as pandas series instead
-            pd.Series(self.IF_arr).to_csv(join(savedir, f"results_{run_id}.csv"))
+        self.IF_dict.to_csv(join(savedir, f"{run_id}.csv"))
