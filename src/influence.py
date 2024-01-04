@@ -76,9 +76,9 @@ class IFEngineGeneration(object):
 
     def compute_hvp_proposed(self, lambda_const_param=10):
         hvp_proposed_dict=defaultdict(dict)
+        print("Computing for each validation point")
         for val_id in tqdm(self.val_grad_dict.keys()):
-            print("Computing for each model param")
-            for weight_name in tqdm(self.val_grad_dict[val_id]):
+            for weight_name in self.val_grad_dict[val_id]:
                 # lambda_const computation
                 S=torch.zeros(len(self.tr_grad_dict.keys()))
                 for tr_id in self.tr_grad_dict:

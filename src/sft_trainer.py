@@ -45,6 +45,7 @@ class ScriptArguments:
     log_with: Optional[str] = field(default=None, metadata={"help": "use 'wandb' to log with wandb"})
     learning_rate: Optional[float] = field(default=3e-4, metadata={"help": "the learning rate"})
     batch_size: Optional[int] = field(default=64, metadata={"help": "the batch size"})
+    micro_batch_size: Optional[int] = field(default=4, metadata={"help": "the micro batch size"})
     seq_length: Optional[int] = field(default=128, metadata={"help": "Input sequence length"})
     gradient_accumulation_steps: Optional[int] = field(
         default=16, metadata={"help": "the number of gradient accumulation steps"}
@@ -67,7 +68,6 @@ class ScriptArguments:
     save_total_limit: Optional[int] = field(default=5, metadata={"help": "Limits total number of checkpoints."})
     push_to_hub: Optional[bool] = field(default=False, metadata={"help": "Push the model to HF Hub"})
     hub_model_id: Optional[str] = field(default=None, metadata={"help": "The name of the model on HF Hub"})
-
 
 parser = HfArgumentParser(ScriptArguments)
 script_args = parser.parse_args_into_dataclasses()[0]
@@ -114,12 +114,17 @@ try:
     dataset = load_dataset(script_args.dataset_name, split="train")
 except:
     dataset = load_dataset('csv', data_files=script_args.dataset_name)['train']
+
 print("loading training args...")
 # Step 3: Define the training arguments
+
+micro_batch_size = script_args.micro_batch_size
+gradient_accumulation_steps = script_args.batch_size // micro_batch_size
+
 training_args = TrainingArguments(
     output_dir=script_args.output_dir,
-    per_device_train_batch_size=script_args.batch_size,
-    gradient_accumulation_steps=script_args.gradient_accumulation_steps,
+    per_device_train_batch_size= micro_batch_size, 
+    gradient_accumulation_steps=gradient_accumulation_steps,
     learning_rate=script_args.learning_rate,
     logging_steps=script_args.logging_steps,
     num_train_epochs=script_args.num_train_epochs,
@@ -151,9 +156,9 @@ elif script_args.use_peft and script_args.config_json is None:
 else:
     peft_config = None
 
-from transformers import LlamaForCausalLM, LlamaTokenizer, get_linear_schedule_with_warmup, set_seed
+from transformers import AutoTokenizer, get_linear_schedule_with_warmup, set_seed
 
-llama_tokenizer = LlamaTokenizer.from_pretrained(script_args.model_name)
+llama_tokenizer = AutoTokenizer.from_pretrained(script_args.model_name, trust_remote_code=script_args.trust_remote_code)
 llama_tokenizer.padding_side = 'right'
 llama_tokenizer.pad_token = llama_tokenizer.eos_token
 print("training...")
