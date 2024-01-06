@@ -38,9 +38,8 @@ class ScriptArguments:
     The name of the Casual LM model we wish to fine with SFTTrainer
     """
 
-    model_name: str = field(default="", metadata={"help": "the model name"})
-    dataset_name: str = field(
-        default="", metadata={"help": "the dataset name"}
+    model_name: str = field(metadata={"help": "the model name"})
+    dataset_name: str = field(metadata={"help": "the dataset name"}
     )
     config_json: Optional[str] = field(default=None, metadata={"help": "the config json for PEFT"})
     dataset_text_field: Optional[str] = field(default="text", metadata={"help": "the text field of the dataset"})
