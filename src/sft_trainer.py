@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union, List
 
 import torch
 from accelerate import Accelerator
@@ -24,6 +24,8 @@ from tqdm import tqdm
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments
 
 from trl import SFTTrainer
+import pandas as pd
+from os.path import join
 
 
 tqdm.pandas()
@@ -36,27 +38,27 @@ class ScriptArguments:
     The name of the Casual LM model we wish to fine with SFTTrainer
     """
 
-    model_name: Optional[str] = field(default="", metadata={"help": "the model name"})
-    dataset_name: Optional[str] = field(
+    model_name: [str] = field(default="", metadata={"help": "the model name"})
+    dataset_name: [str] = field(
         default="", metadata={"help": "the dataset name"}
     )
     config_json: Optional[str] = field(default=None, metadata={"help": "the config json for PEFT"})
     dataset_text_field: Optional[str] = field(default="text", metadata={"help": "the text field of the dataset"})
     log_with: Optional[str] = field(default=None, metadata={"help": "use 'wandb' to log with wandb"})
-    learning_rate: Optional[float] = field(default=3e-4, metadata={"help": "the learning rate"})
-    batch_size: Optional[int] = field(default=64, metadata={"help": "the batch size"})
+    learning_rate: Optional[float] = field(default=1e-4, metadata={"help": "the learning rate"})
+    val_set_size: Optional[float] = field(default=2000, metadata={"help": "the size of the validation set"})
+    batch_size: Optional[int] = field(default=128, metadata={"help": "the batch size"})
     micro_batch_size: Optional[int] = field(default=4, metadata={"help": "the micro batch size"})
-    seq_length: Optional[int] = field(default=128, metadata={"help": "Input sequence length"})
-    gradient_accumulation_steps: Optional[int] = field(
-        default=16, metadata={"help": "the number of gradient accumulation steps"}
-    )
+    seq_length: Optional[int] = field(default=512, metadata={"help": "Input sequence length"})
     load_in_8bit: Optional[bool] = field(default=False, metadata={"help": "load the model in 8 bits precision"})
     load_in_4bit: Optional[bool] = field(default=False, metadata={"help": "load the model in 4 bits precision"})
     use_peft: Optional[bool] = field(default=False, metadata={"help": "Wether to use PEFT or not to train adapters"})
     trust_remote_code: Optional[bool] = field(default=True, metadata={"help": "Enable `trust_remote_code`"})
     output_dir: Optional[str] = field(default="output", metadata={"help": "the output directory"})
+    lora_target_modules: Optional[Union[List[str], str]] = field(default="[q_proj,v_proj]", metadata={"help": "the target modules of the LoRA adapters"})
     peft_lora_r: Optional[int] = field(default=8, metadata={"help": "the r parameter of the LoRA adapters"})
-    peft_lora_alpha: Optional[int] = field(default=32, metadata={"help": "the alpha parameter of the LoRA adapters"})
+    peft_lora_alpha: Optional[int] = field(default=16, metadata={"help": "the alpha parameter of the LoRA adapters"})
+    peft_lora_dropout: Optional[float] = field(default=0.05, metadata={"help": "the dropout parameter of the LoRA adapters"})
     logging_steps: Optional[int] = field(default=1, metadata={"help": "the number of logging steps"})
     use_auth_token: Optional[bool] = field(default=True, metadata={"help": "Use HF auth token to access the model"})
     local_files_only: Optional[bool] = field(default=False, metadata={"help": "Load only local files"})
@@ -65,7 +67,8 @@ class ScriptArguments:
     save_steps: Optional[int] = field(
         default=100, metadata={"help": "Number of updates steps before two checkpoint saves"}
     )
-    save_total_limit: Optional[int] = field(default=5, metadata={"help": "Limits total number of checkpoints."})
+    group_by_length: Optional[bool] = field(default=False, metadata={"help": "Whether or not to group samples by length."})
+    save_total_limit: Optional[int] = field(default=2, metadata={"help": "Limits total number of checkpoints."})
     push_to_hub: Optional[bool] = field(default=False, metadata={"help": "Push the model to HF Hub"})
     hub_model_id: Optional[str] = field(default=None, metadata={"help": "The name of the model on HF Hub"})
 
@@ -115,6 +118,21 @@ try:
 except:
     dataset = load_dataset('csv', data_files=script_args.dataset_name)['train']
 
+if script_args.val_set_size > 0:
+    train_val = dataset.train_test_split(
+        test_size=script_args.val_set_size, shuffle=True, seed=42
+    )
+    train_data = (
+        train_val["train"].shuffle()
+    )
+    val_data = (
+        train_val["test"].shuffle()
+    )
+else:
+    train_data = dataset.shuffle()
+    val_data = None
+
+
 print("loading training args...")
 # Step 3: Define the training arguments
 
@@ -125,16 +143,19 @@ training_args = TrainingArguments(
     output_dir=script_args.output_dir,
     per_device_train_batch_size= micro_batch_size, 
     gradient_accumulation_steps=gradient_accumulation_steps,
+    optim="adamw_torch_fused",
     learning_rate=script_args.learning_rate,
-    logging_steps=script_args.logging_steps,
+    logging_strategy="epoch",
+    save_strategy="epoch",
     num_train_epochs=script_args.num_train_epochs,
     max_steps=script_args.max_steps,
     report_to=script_args.log_with,
-    save_steps=script_args.save_steps,
     save_total_limit=script_args.save_total_limit,
+    evaluation_strategy="epoch" if script_args.val_set_size > 0 else "no",
     push_to_hub=script_args.push_to_hub,
     hub_model_id=script_args.hub_model_id,
-    gradient_checkpointing=True
+    gradient_checkpointing=True,
+    group_by_length=script_args.group_by_length
 )
 print("loading LORA config...")
 # Step 4: Define the LoraConfig
@@ -149,8 +170,9 @@ elif script_args.use_peft and script_args.config_json is None:
         inference_mode=False,
         r=script_args.peft_lora_r,
         lora_alpha=script_args.peft_lora_alpha,
-        lora_dropout=0.05,
-        target_modules = ["q_proj", "v_proj"]
+        lora_dropout=script_args.peft_lora_dropout,
+        target_modules=script_args.lora_target_modules,
+        bias="none"
     )
 
 else:
@@ -158,26 +180,23 @@ else:
 
 from transformers import AutoTokenizer, get_linear_schedule_with_warmup, set_seed
 
-llama_tokenizer = AutoTokenizer.from_pretrained(script_args.model_name, trust_remote_code=script_args.trust_remote_code)
-llama_tokenizer.padding_side = 'right'
-llama_tokenizer.pad_token = llama_tokenizer.eos_token
-print("training...")
+tokenizer = AutoTokenizer.from_pretrained(script_args.model_name,
+                                                trust_remote_code=script_args.trust_remote_code)
+tokenizer.padding_side = 'right'
+tokenizer.pad_token = tokenizer.eos_token
 # Step 5: Define the Trainer
 trainer = SFTTrainer(
     model=model,
-    tokenizer=llama_tokenizer,
+    tokenizer=tokenizer,
     args=training_args,
     max_seq_length=script_args.seq_length,
-    train_dataset=dataset,
+    train_dataset=train_data,
+    eval_dataset=val_data,
     dataset_text_field=script_args.dataset_text_field,
-    peft_config=peft_config,
-    # optim="adamw_torch_fused"
+    peft_config=peft_config
 )
-# import pdb; pdb.set_trace()
-
 trainer.train()
 print("saving...")
 # Step 6: Save the model
-# import pdb; pdb.set_trace()
 trainer.save_model(script_args.output_dir)
-
+pd.DataFrame(trainer.state.log_history).to_csv(join(script_args.output_dir, "log_history.csv"))
