@@ -38,8 +38,8 @@ class ScriptArguments:
     The name of the Casual LM model we wish to fine with SFTTrainer
     """
 
-    model_name: [str] = field(default="", metadata={"help": "the model name"})
-    dataset_name: [str] = field(
+    model_name: str = field(default="", metadata={"help": "the model name"})
+    dataset_name: str = field(
         default="", metadata={"help": "the dataset name"}
     )
     config_json: Optional[str] = field(default=None, metadata={"help": "the config json for PEFT"})
@@ -199,4 +199,4 @@ trainer.train()
 print("saving...")
 # Step 6: Save the model
 trainer.save_model(script_args.output_dir)
-pd.DataFrame(trainer.state.log_history).to_csv(join(script_args.output_dir, "log_history.csv"))
+pd.DataFrame(trainer.state.log_history).to_csv(join(script_args.output_dir, "log.csv"))
