@@ -118,8 +118,10 @@ except:
     dataset = load_dataset('csv', data_files=script_args.dataset_name)['train']
 
 if script_args.val_set_size > 0:
+    # cast as int if setting as absolute size, else use as fraction
+    t_size = int(script_args.val_set_size) if script_args.val_set_size > 1 else script_args.val_set_size
     train_val = dataset.train_test_split(
-        test_size=script_args.val_set_size, shuffle=True, seed=42
+        test_size=t_size, shuffle=True, seed=42
     )
     train_data = (
         train_val["train"].shuffle()
