@@ -166,13 +166,19 @@ if script_args.use_peft and script_args.config_json is not None:
 
 elif script_args.use_peft and script_args.config_json is None:
     print("Using default PEFT config but no provided config_json. Reverting to provided values.")
+    # convert to list of str
+    if isinstance(script_args.lora_target_modules, str):
+        lora_target_modules = script_args.lora_target_modules.replace("[", "").replace("]", "").split(",")
+    else:
+        lora_target_modules = script_args.lora_target_modules
+
     peft_config = LoraConfig(
         task_type="CAUSAL_LM",
         inference_mode=False,
         r=script_args.peft_lora_r,
         lora_alpha=script_args.peft_lora_alpha,
         lora_dropout=script_args.peft_lora_dropout,
-        target_modules=script_args.lora_target_modules,
+        target_modules=lora_target_modules,
         bias="none"
     )
 
