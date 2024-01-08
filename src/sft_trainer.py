@@ -111,8 +111,39 @@ else:
 
 print("loading dataset...")
 # Step 2: Load the dataset
+tokenizer = AutoTokenizer.from_pretrained(script_args.model_name,
+                                                trust_remote_code=script_args.trust_remote_code)
+tokenizer.pad_token_id = (
+    0  # unk. we want this to be different from the eos token
+)
+tokenizer.padding_side = "left"  # Allow batched inference
+
+
+
+# tokenize function was copied for Alpaca-Lora finetune.py
+def tokenize(prompt, add_eos_token=True):
+    # there's probably a way to do this with the tokenizer settings
+    # but again, gotta move fast
+    result = tokenizer(
+        prompt,
+        truncation=True,
+        max_length=script_args.seq_length,
+        padding=False,
+        return_tensors=None,
+    )
+    if (
+        result["input_ids"][-1] != tokenizer.eos_token_id
+        and len(result["input_ids"]) < script_args.seq_length
+        and add_eos_token
+    ):
+        result["input_ids"].append(tokenizer.eos_token_id)
+        result["attention_mask"].append(1)
+
+    result["labels"] = result["input_ids"].copy()
+
+    return result
+
 try:
-    # import pdb; pdb.set_trace()
     dataset = load_dataset(script_args.dataset_name, split="train")
 except:
     dataset = load_dataset('csv', data_files=script_args.dataset_name)['train']
@@ -124,13 +155,13 @@ if script_args.val_set_size > 0:
         test_size=t_size, shuffle=True, seed=42
     )
     train_data = (
-        train_val["train"].shuffle()
+        train_val["train"].shuffle().map(tokenize)
     )
     val_data = (
-        train_val["test"].shuffle()
+        train_val["test"].shuffle().map(tokenize)
     )
 else:
-    train_data = dataset.shuffle()
+    train_data = dataset.shuffle().map(tokenize)
     val_data = None
 
 
@@ -187,10 +218,6 @@ else:
 
 from transformers import AutoTokenizer, get_linear_schedule_with_warmup, set_seed
 
-tokenizer = AutoTokenizer.from_pretrained(script_args.model_name,
-                                                trust_remote_code=script_args.trust_remote_code)
-tokenizer.padding_side = 'right'
-tokenizer.pad_token = tokenizer.eos_token
 # Step 5: Define the Trainer
 trainer = SFTTrainer(
     model=model,
