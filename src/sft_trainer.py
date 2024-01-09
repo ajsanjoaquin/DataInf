@@ -20,6 +20,7 @@ from accelerate import Accelerator
 from datasets import load_dataset
 from peft import LoraConfig
 import json
+import numpy as np
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments
 
@@ -128,7 +129,7 @@ def formatting_prompts_func(examples):
         input_text = examples["input"][i]
         response = examples["output"][i]
 
-        if len(input_text) >= 2:
+        if input_text is not np.nan and input_text:
             text = f'''Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
             
             ### Instruction:
