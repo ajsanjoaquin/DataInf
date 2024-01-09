@@ -110,4 +110,4 @@ class IFEngineGeneration(object):
         if not os.path.exists(savedir):
             os.makedirs(savedir)
 
-        self.IF_dict.to_csv(join(savedir, f"{run_id}.csv"))
+        self.IF_dict.to_csv(join(savedir, f"{run_id}.csv"), index=False)
