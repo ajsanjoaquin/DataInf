@@ -119,7 +119,7 @@ tokenizer = AutoTokenizer.from_pretrained(script_args.model_name,
 # IMPORTANT MUST BE DIFF FROM EOS TOKEN ID so outputs end.
 tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 assert tokenizer.pad_token_id != tokenizer.eos_token_id
-tokenizer.padding_side = "left"  # Allow batched inference
+tokenizer.padding_side = "right"  # Allow batched inference
 
 def formatting_prompts_func(examples):
     output_text = []
@@ -129,26 +129,13 @@ def formatting_prompts_func(examples):
         response = examples["output"][i]
 
         if input_text is not np.nan and input_text:
-            text = f'''Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
-            
-            ### Instruction:
-            {instruction}
-            
-            ### Input:
-            {input_text}
-            
-            ### Response:
-            {response}
-            '''
+            text = f'''Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.\n
+### Instruction:\n{instruction}\n
+### Input:\n{input}\n\n### Response:\n{response}'''
         else:
-            text = f'''Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
-            
-            ### Instruction:
-            {instruction}
-            
-            ### Response:
-            {response}
-            '''
+            text = f'''Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.\n
+### Instruction:\n{instruction}\n\n
+### Response:\n{response}'''
         output_text.append(text)
 
     return output_text
