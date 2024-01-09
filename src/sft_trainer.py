@@ -114,11 +114,10 @@ print("loading dataset...")
 # Step 2: Load the dataset
 # Just loads the dataset, SFTTrainer will preprocess it for us
 tokenizer = AutoTokenizer.from_pretrained(script_args.model_name,
-                                                trust_remote_code=script_args.trust_remote_code)
+                                          add_eos_token = True,
+                                          trust_remote_code=script_args.trust_remote_code)
 # IMPORTANT MUST BE DIFF FROM EOS TOKEN ID so outputs end.
-tokenizer.pad_token_id = (
-    0  # unk. we want this to be different from the eos token
-)
+tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 assert tokenizer.pad_token_id != tokenizer.eos_token_id
 tokenizer.padding_side = "left"  # Allow batched inference
 
