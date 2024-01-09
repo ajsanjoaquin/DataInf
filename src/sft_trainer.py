@@ -21,7 +21,8 @@ from datasets import load_dataset
 from peft import LoraConfig
 import json
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments
+
 
 from trl import SFTTrainer
 import pandas as pd
@@ -215,8 +216,6 @@ elif script_args.use_peft and script_args.config_json is None:
 
 else:
     peft_config = None
-
-from transformers import AutoTokenizer, get_linear_schedule_with_warmup, set_seed
 
 # Step 5: Define the Trainer
 trainer = SFTTrainer(
