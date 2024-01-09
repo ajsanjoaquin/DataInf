@@ -117,9 +117,10 @@ tokenizer = AutoTokenizer.from_pretrained(script_args.model_name,
                                           add_eos_token = True,
                                           trust_remote_code=script_args.trust_remote_code)
 # IMPORTANT MUST BE DIFF FROM EOS TOKEN ID so outputs end.
-tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-assert tokenizer.pad_token_id != tokenizer.eos_token_id
-tokenizer.padding_side = "right"  # Allow batched inference
+if 'llama' in script_args.model_name:
+    tokenizer.pad_token_id = (0)
+    assert tokenizer.pad_token_id != tokenizer.eos_token_id
+    tokenizer.padding_side = "right"  # according to the internet lol
 
 def formatting_prompts_func(examples):
     output_text = []
