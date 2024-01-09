@@ -43,7 +43,6 @@ class ScriptArguments:
     dataset_name: str = field(metadata={"help": "the dataset name"}
     )
     config_json: Optional[str] = field(default=None, metadata={"help": "the config json for PEFT"})
-    dataset_text_field: Optional[str] = field(default="text", metadata={"help": "the text field of the dataset"})
     log_with: Optional[str] = field(default=None, metadata={"help": "use 'wandb' to log with wandb"})
     learning_rate: Optional[float] = field(default=1e-4, metadata={"help": "the learning rate"})
     val_set_size: Optional[float] = field(default=2000, metadata={"help": "the size of the validation set"})
@@ -112,37 +111,47 @@ else:
 
 print("loading dataset...")
 # Step 2: Load the dataset
+# Just loads the dataset, SFTTrainer will preprocess it for us
 tokenizer = AutoTokenizer.from_pretrained(script_args.model_name,
                                                 trust_remote_code=script_args.trust_remote_code)
+# IMPORTANT MUST BE DIFF FROM EOS TOKEN ID so outputs end.
 tokenizer.pad_token_id = (
     0  # unk. we want this to be different from the eos token
 )
+assert tokenizer.pad_token_id != tokenizer.eos_token_id
 tokenizer.padding_side = "left"  # Allow batched inference
 
+def formatting_prompts_func(examples):
+    output_text = []
+    for i in range(len(examples["instruction"])):
+        instruction = examples["instruction"][i]
+        input_text = examples["input"][i]
+        response = examples["output"][i]
 
+        if len(input_text) >= 2:
+            text = f'''Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+            
+            ### Instruction:
+            {instruction}
+            
+            ### Input:
+            {input_text}
+            
+            ### Response:
+            {response}
+            '''
+        else:
+            text = f'''Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+            
+            ### Instruction:
+            {instruction}
+            
+            ### Response:
+            {response}
+            '''
+        output_text.append(text)
 
-# tokenize function was copied for Alpaca-Lora finetune.py
-def tokenize(prompt, add_eos_token=True):
-    # there's probably a way to do this with the tokenizer settings
-    # but again, gotta move fast
-    result = tokenizer(
-        prompt,
-        truncation=True,
-        max_length=script_args.seq_length,
-        padding=False,
-        return_tensors=None,
-    )
-    if (
-        result["input_ids"][-1] != tokenizer.eos_token_id
-        and len(result["input_ids"]) < script_args.seq_length
-        and add_eos_token
-    ):
-        result["input_ids"].append(tokenizer.eos_token_id)
-        result["attention_mask"].append(1)
-
-    result["labels"] = result["input_ids"].copy()
-
-    return result
+    return output_text
 
 try:
     dataset = load_dataset(script_args.dataset_name, split="train")
@@ -156,13 +165,13 @@ if script_args.val_set_size > 0:
         test_size=t_size, shuffle=True, seed=42
     )
     train_data = (
-        train_val["train"].shuffle().map(tokenize)
+        train_val["train"].shuffle()
     )
     val_data = (
-        train_val["test"].shuffle().map(tokenize)
+        train_val["test"].shuffle()
     )
 else:
-    train_data = dataset.shuffle().map(tokenize)
+    train_data = dataset.shuffle()
     val_data = None
 
 
@@ -225,7 +234,8 @@ trainer = SFTTrainer(
     max_seq_length=script_args.seq_length,
     train_dataset=train_data,
     eval_dataset=val_data,
-    dataset_text_field=script_args.dataset_text_field,
+    formatting_func=formatting_prompts_func,
+    packing=False,
     peft_config=peft_config
 )
 trainer.train()
