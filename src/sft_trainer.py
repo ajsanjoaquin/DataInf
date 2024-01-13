@@ -122,6 +122,9 @@ if 'llama' in script_args.model_name:
     assert tokenizer.pad_token_id != tokenizer.eos_token_id
     tokenizer.padding_side = "right"  # according to the internet lol
 
+if "phi" in script_args.BASE_PATH:
+	tokenizer.pad_token_id = tokenizer.eos_token_id
+
 def formatting_prompts_func(examples):
     output_text = []
     for i in range(len(examples["instruction"])):
