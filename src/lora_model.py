@@ -282,33 +282,3 @@ class LORAEngineGeneration(object):
             del grad_dict
             
         return tr_grad_dict, val_grad_dict
-    
-    def compute_gradient_train_only(self, train_dset, collate_fn):
-        train_dataloader_stochastic = DataLoader(train_dset, 
-                                                  shuffle=False,
-                                                  collate_fn=collate_fn,
-                                                  batch_size=1)
-        self.model.eval()
-        tr_grad_dict = {}
-        for step, batch in enumerate(tqdm(train_dataloader_stochastic)):
-            self.model.zero_grad() # zeroing out gradient
-            batch['labels'] = batch['input_ids']
-            batch.to(self.device)
-            outputs = self.model(**batch)
-            loss = outputs.loss
-            loss.backward()
-            
-            grad_dict={}
-            for k, v in self.model.named_parameters():
-                if 'lora_A' in k:
-                    grad_dict[k]=v.grad.cpu()
-                elif 'lora_B' in k:
-                    # first index of shape indicates low-rank
-                    grad_dict[k]=v.grad.cpu().T
-                else:
-                    pass
-            tr_grad_dict[step]=grad_dict
-            del grad_dict
-            
-        return tr_grad_dict
-

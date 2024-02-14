@@ -8,7 +8,7 @@ import torch
 
 class IFEngine(object):
     def __init__(self):
-        pass
+        self.val_grad_avg_dict = None
 
     def preprocess_gradients(self, tr_grad_dict, val_grad_dict, noise_index=0):
         self.tr_grad_dict = tr_grad_dict
@@ -17,8 +17,9 @@ class IFEngine(object):
 
         self.n_train = len(self.tr_grad_dict.keys())
         self.n_val = len(self.val_grad_dict.keys())
-        print("Computing avg gradient on validation dataset...")
-        self.compute_val_grad_avg()
+        if self.val_grad_avg_dict is None:
+            print("Computing avg gradient on validation dataset...")
+            self.compute_val_grad_avg()
 
     def compute_val_grad_avg(self):
         # Compute the avg gradient on the validation dataset
