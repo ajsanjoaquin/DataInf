@@ -125,6 +125,7 @@ else:
 	tokenizer.pad_token_id = tokenizer.eos_token_id
 
 def formatting_prompts_func(examples):
+    # FOR ALPACA DATA
     output_text = []
     for i in range(len(examples["instruction"])):
         instruction = examples["instruction"][i]
@@ -146,7 +147,7 @@ def formatting_prompts_func(examples):
 try:
     dataset = load_dataset(script_args.dataset_name, split="train")
 except:
-    dataset = load_dataset('csv', data_files=script_args.dataset_name)['train']
+    dataset = load_dataset('parquet', data_files=script_args.dataset_name)['train']
 
 if script_args.val_set_size > 0:
     # cast as int if setting as absolute size, else use as fraction
@@ -224,7 +225,8 @@ trainer = SFTTrainer(
     max_seq_length=script_args.seq_length,
     train_dataset=train_data,
     eval_dataset=val_data,
-    formatting_func=formatting_prompts_func,
+    dataset_text_field="text",
+    #formatting_func=formatting_prompts_func,
     packing=False,
     peft_config=peft_config
 )
