@@ -59,13 +59,13 @@ class ScriptArguments:
     peft_lora_r: Optional[int] = field(default=8, metadata={"help": "the r parameter of the LoRA adapters"})
     peft_lora_alpha: Optional[int] = field(default=16, metadata={"help": "the alpha parameter of the LoRA adapters"})
     peft_lora_dropout: Optional[float] = field(default=0.05, metadata={"help": "the dropout parameter of the LoRA adapters"})
-    logging_steps: Optional[int] = field(default=1, metadata={"help": "the number of logging steps"})
+    logging_steps: Optional[int] = field(default=100, metadata={"help": "the number of logging steps"})
     use_auth_token: Optional[bool] = field(default=True, metadata={"help": "Use HF auth token to access the model"})
     local_files_only: Optional[bool] = field(default=False, metadata={"help": "Load only local files"})
     num_train_epochs: Optional[int] = field(default=10, metadata={"help": "the number of training epochs"})
     max_steps: Optional[int] = field(default=-1, metadata={"help": "the number of training steps"})
     save_steps: Optional[int] = field(
-        default=100, metadata={"help": "Number of updates steps before two checkpoint saves"}
+        default=10, metadata={"help": "Number of updates steps before two checkpoint saves"}
     )
     group_by_length: Optional[bool] = field(default=False, metadata={"help": "Whether or not to group samples by length."})
     save_total_limit: Optional[int] = field(default=2, metadata={"help": "Limits total number of checkpoints."})
@@ -188,7 +188,8 @@ training_args = TrainingArguments(
     push_to_hub=script_args.push_to_hub,
     hub_model_id=script_args.hub_model_id,
     gradient_checkpointing=True,
-    group_by_length=script_args.group_by_length
+    group_by_length=script_args.group_by_length,
+    gradient_checkpointing_kwargs={'use_reentrant':False}
 )
 print("loading LORA config...")
 # Step 4: Define the LoraConfig
