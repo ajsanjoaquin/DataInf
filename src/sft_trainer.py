@@ -101,6 +101,7 @@ model = AutoModelForCausalLM.from_pretrained(
     use_auth_token=script_args.use_auth_token,
     local_files_only=script_args.local_files_only,
 )
+
 model.config.use_cache = False
 
 if hasattr(model, "enable_input_require_grads"):
@@ -110,6 +111,7 @@ else:
          output.requires_grad_(True)
 
     model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
+
 
 print("loading dataset...")
 # Step 2: Load the dataset
@@ -190,7 +192,8 @@ training_args = TrainingArguments(
     hub_model_id=script_args.hub_model_id,
     gradient_checkpointing=True,
     group_by_length=script_args.group_by_length,
-    gradient_checkpointing_kwargs={'use_reentrant':False}
+    gradient_checkpointing_kwargs={'use_reentrant':False},
+    ddp_find_unused_parameters=False
 )
 print("loading LORA config...")
 # Step 4: Define the LoraConfig
