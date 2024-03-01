@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Union, List
 
 import torch
-from accelerate import Accelerator
+from accelerate import PartialState
 from datasets import load_dataset
 from peft import LoraConfig
 import json
@@ -31,6 +31,7 @@ from os.path import join
 
 
 tqdm.pandas()
+device_string = PartialState().process_index
 
 
 # Define and parse arguments.
@@ -84,7 +85,7 @@ elif script_args.load_in_8bit or script_args.load_in_4bit:
         load_in_8bit=script_args.load_in_8bit, load_in_4bit=script_args.load_in_4bit
     )
     # Copy the model to each device
-    device_map = {"": Accelerator().local_process_index}
+    device_map = {"":device_string}
     torch_dtype = torch.bfloat16
 else:
     quantization_config = None
